@@ -83,3 +83,61 @@ DESCRIPTION:
      labels match the selector).
 ~~~
  
+**Extracting Information from a Single Resource**
+~~~
+$ oc get deployment cluster-samples-operator -n openshift-cluster-samples-operator -o jsonpath='{.status.availableReplicas}'
+
+True
+~~~
+
+**Extracting a Single Property from Multiple Resources**
+~~~
+$ oc get route -n openshift-monitoring -o jsonpath='{.items[*].spec.host}'
+
+alertmanager-main-openshift-monitoring.apps.ocp4.example.com
+grafana-openshift-monitoring.apps.ocp4.example.com prometheus-k8s-
+openshift-monitoring.apps.ocp4.example.com thanos-querier-openshift-
+monitoring.apps.ocp4.example.com
+~~~
+
+**Extracting a Single Property with Multiple Nesting from Resources**
+
+~~~
+$ oc get pods --all-namespaces -o jsonpath='{.items[*].spec.containers[*].image}'
+
+quay.io/external_storage/nfs-client-provisioner:latest
+...output omitted...
+~~~
+
+**Extracting Multiple Properties at Different Levels of Nesting from Resources**
+
+~~~
+$ oc get pods --all-namespaces -o jsonpath='{range .items[*]}{.metadata.namespace} {.metadata.creationTimestamp}{"\n"}{end}'
+
+nfs-client-provisioner 2022-05-18T09:53:59Z
+openshift-apiserver-operator 2022-05-18T09:55:10Z
+openshift-apiserver 2022-05-18T10:54:46Z
+openshift-apiserver 2022-05-18T10:53:25Z
+...output omitted...
+~~~
+
+**Using Label Filtering**
+
+~~~
+$ oc get deployment -n openshift-cluster-storage-operator --show-labels
+
+NAME
+ ... LABELS
+cluster-storage-operator
+ ... <none>
+csi-snapshot-controller
+ ... <none>
+csi-snapshot-controller-operator
+ ... app=csi-snapshot-controller-operator
+ ~~~
+
+ ~~~
+ $ oc get deployment -n openshift-cluster-storage-operator -l app=csi-snapshot-controller-operator -o name
+ ~~~
+
+ ## Deploying Scripts on OpenShift
