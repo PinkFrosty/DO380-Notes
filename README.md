@@ -141,3 +141,48 @@ csi-snapshot-controller-operator
  ~~~
 
  ## Deploying Scripts on OpenShift
+
+
+# Storage
+
+---
+
+|OpenShift Storage Component| Description |
+|---|---|
+|Provisioner| Code that OpenShift uses to create a storage resource.|
+|Persistent Volume|A cluster resource that defines the information that OpenShift requires to mount a volume to a node.|
+|Storage Class|A cluster resource that defines characteristics for a particular type of storage that users can request.|
+|Persistent Volume Claim|A project resource that defines a request for storage with specific storage characteristics.|
+|Volume Plug-in | Code that OpenShift uses to mount a storage resource on a node.|
+
+
+
+ Display all storage-related package manifests.
+~~~
+$ oc get packagemanifests | egrep 'NAME|storage'
+~~~
+
+Find the source values that you need for the subscription resource template.
+~~~
+$  oc describe packagemanifests local-storage-operator | grep -i 'Catalog Source'
+~~~
+
+Find the channel value that you need for the subscription resource template.
+~~~
+$  oc get packagemanifests local-storage-operator -o jsonpath='{range .status.channels[*]}{.name}{"\n"}{end}'
+~~~
+
+Display the list of custom resource definition types that the operator owns. Verify that no operator-owned custom resources exist in the project.
+~~~
+$ oc get clusterserviceversions -o name
+clusterserviceversion.operators.coreos.com/local-storage-operator.4.10.0-202209080237
+
+$ export CSV_NAME=$(oc get csv -o name)
+$ echo ${CSV_NAME}
+clusterserviceversion.operators.coreos.com/local-storage-operator.4.10.0-202209080237
+
+$ oc get ${CSV_NAME} -o jsonpath='{.spec.customresourcedefinitions.owned[*].kind}{"\n"}'
+LocalVolume LocalVolumeSet LocalVolumeDiscovery LocalVolumeDiscoveryResult
+
+~~~
+
