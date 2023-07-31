@@ -233,7 +233,7 @@ This is the default configuration of the alertmanager-main secret. The double qu
 "alertname": "Watchdog"
 "receiver": "null"
 ~~~
-This will have " in it and they must be removed before applying to the cluster. 
+This will have `"` in it and they must be removed before applying to the cluster. 
 ~~~
 $ sed -i 's/"//g' /tmp/alertmanager.yaml
 ~~~
@@ -269,7 +269,7 @@ Email Example:
 ~~~
 
 ###  Applying a New Alertmanager Configuration
-  - Apply a new Alertmanager configuration by updating the alertmanager-main secret in the openshift-monitoring namespace.
+  - Apply a new Alertmanager configuration by updating the alertmanager-main secret in the `openshift-monitoring` namespace.
 ~~~
 $ oc set data secret/alertmanager-main -n openshift-monitoring --from-file=/tmp/alertmanager.yaml
 secret/alertmanager-main data updated
@@ -284,4 +284,150 @@ component=configuration msg="Completed loading of configuration file" file=/etc/
 alertmanager/config/alertmanager.yaml
 ~~~
 
+### Troubleshooting Using the Cluster Monitoring Stack
 
+  - Prometheus is an open source project for system monitoring and alerting.
+  - Both Red Hat OpenShift Container Platform and Kubernetes integrate Prometheus to enable cluster metrics, monitoring, and alerting capabilities.
+
+  - Prometheus gathers and stores streams of data from the cluster as time-series data. Time-series data consists of a sequence of samples, with each sample containing:
+    - A timestamp.
+    - A numeric value (such as an integer, float, or Boolean).
+    - A set of labels in the form of key/value pairs. The key/value pairs are used to isolate groups of related values for filtering.
+
+For example, the machine_cpu_cores metric in Prometheus contains a sequence of measurement samples of the number of CPU cores for each machine.
+
+**OpenShift integrates Prometheus metrics at `Observe > Metrics`.**
+
+### Reviewing OpenShift Metrics
+As mentioned elsewhere in this chapter, OpenShift has three monitoring stack components to gather the metrics from the Kubernetes API: the `kube-state-metrics`, `openshift-state- metrics`, and `node-exporter` agents.
+
+### Describing Prometheus Query Language
+Prometheus provides a query language, PromQL, that allows you to select and aggregate time-series data.
+You can filter a metric to include only certain key/value pairs. For example, modify the previous query to show only metrics for the worker02 node using the following expression:
+
+~~~
+instance:node_cpu_utilisation:rate1m{instance="worker02"}
+~~~
+`sum()`
+  - Totals the value of all sample entries at a given time
+`rate()`
+  - Computes the per-second average of a time series for a given time range
+`count()`
+  - Counts the number of sample entries at a given time
+`max()` 
+  - Select the maximum over the sample entries.
+
+The following are two examples of Prometheus Query Language expressions that use one metric gathered by the node-exporter agent, and another metric gathered by the `kube-state-metrics` agent .
+
+~~~
+node_memory_MemAvailable_bytes/node_memory_MemTotal_bytes*100<50
+  Shows nodes with less than 50% of memory available.
+kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+  Shows persistent volume claims in pending state.
+~~~
+
+OpenShift cluster monitoring includes the following default dashboards:
+
+etcd
+  - This dashboard provides information on etcd instances running in the cluster.
+
+Kubernetes/Compute Resources/Cluster
+  - This dashboard provides a high-level view of cluster resources.
+
+Kubernetes/Compute Resources/Namespace (Pods)
+  - This dashboard displays resource usage for pods within a namespace.
+
+Kubernetes/Compute Resources/Namespace (Workloads)
+  - This dashboard filters resource usage first by namespace and then by workload type, such as deployment, daemon set, and stateful set. This dashboard displays all workloads of the specified type within the namespace.
+
+Kubernetes/Compute Resources/Node (Pods)
+  - This dashboard shows pod resource usage filtered by node.
+
+Kubernetes/Compute Resources/Pod
+  - This dashboard displays the resource usage for individual pods. Select a namespace and a pod within the namespace.
+
+Kubernetes/Compute Resources/Workload
+  - This dashboard provides resources usage filtered by namespace, workload, and workload type.
+
+Kubernetes/Networking/Cluster
+  - This dashboard displays network usage for the cluster, and sorts many items to show namespaces with the highest usage.
+
+Kubernetes/Networking/Namespace (Pods)
+  - This dashboard displays network usage for pods within a namespace.
+
+Kubernetes/Networking/Pod
+  - This dashboard displays the network usage for individual pods. Select a namespace and a pod within the namespace.
+
+Prometheus
+  - This dashboard provides detailed information about the prometheus-k8s pods running in the openshift-monitoring namespace.
+
+USE Method/Cluster
+  - USE is an acronym for Utilization Saturation and Errors. This dashboard displays several graphics that can identify if the cluster is over-utilized, over-saturated, or experiencing a large number of errors. Because the dashboard displays all nodes in the cluster, you might be able to identity a node that is not behaving the same as the other nodes in the cluster.
+
+### Configuring Storage for the Cluster Monitoring Stack
+
+After installing the cluster monitoring stack, you can configure persistent storage to prevent monitoring data loss. This configuration enables you to keep a record of the past cluster status that you can use to investigate and correlate current and past issues within the cluster.
+
+The following cluster monitoring operator components are configurable
+  - alertmanagerMain
+  - k8sPrometheusAdapter
+  - kubeStateMetrics
+  - nodeExporter
+  - openshiftStateMetrics
+  - prometheusK8s
+  - prometheusOperator
+  - thanosQuerier
+  - telemeterClient
+
+The basic skeleton for the cluster-monitoring-config configuration map follows
+~~~
+apiVersion: 1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+   <component>:
+     <component-configuration-options>
+~~~
+
+~~~
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    prometheusK8s:
+      retention: 15d
+      volumeClaimTemplate:
+        metadata:
+          name: prometheus-local-pv
+        spec:
+          storageClassName: gp2
+          volumeMode: Filesystem
+          resources:
+            requests:
+            storage: 40Gi
+~~~
+
+---
+# Provisioning and Inspecting Cluster Logging
+
+### Red Hat OpenShift Logging Components
+logStore
+  - The logStore is the Elasticsearch cluster that:
+  - Stores the logs into indexes.
+  - Provides RBAC access to the logs.
+  - Provides data redundancy.
+
+collection
+  - Implemented with Fluentd, the collector collects node and application logs, adds pod and namespace metadata, and stores them in the logStore. The collector is a DaemonSet, so there is a Fluentd pod on each node.
+
+visualization
+  - The centralized web UI from Kibana displays the logs and provides a way to query and chart the aggregated data. 
+
+event routing
+  - The Event Router monitors the OpenShift events API and sends the events to STDOUT so the collector can forward them to the logStore. The events from OpenShift are stored in the infra index in Elasticsearch.
