@@ -186,3 +186,102 @@ LocalVolume LocalVolumeSet LocalVolumeDiscovery LocalVolumeDiscoveryResult
 
 ~~~
 
+
+# Monitoring and Metrics
+
+Assigning Cluster Monitoring Roles
+
+~~~
+$ oc adm policy add-cluster-role-to-user cluster-monitoring-view USER
+~~~
+
+### Describing Alertmanager Features
+
+|State|Description|
+|---|---|
+|Firing|  The alert rule evaluates to true, and has evaluated to true for longer than the defined alert duration.|
+|Pending | The alert rule evaluates to true, but has not evaluated to true for longer than the defined alert duration.|
+|Silenced | The alert is Firing, but is actively being silenced. Administrators can silence an alert to temporarily deactivate it.
+|Not Firing |  Any alert that is not Firing, Pending, or Silenced is labeled as Not Firing.
+
+### Describing Alertmanager Default Receivers
+
+By default, alerts are not sent to external locations. The OpenShift web console displays alerts at
+Observe > Alerting. Also, alerts are accessible from the Alertmanager API.
+
+~~~
+[user@host ~]$ ALERTMANAGER="$(oc get route/alertmanager-main -n openshift-monitoring -o jsonpath='{.spec.host}')"
+[user@host ~]$ curl -s -k -H "Authorization: Bearer $(oc sa get-token prometheus-k8s -n openshift-monitoring)" https://${ALERTMANAGER}/api/v1/ alerts | jq .
+~~~
+Configure Alertmanager to send alerts to external locations, such as email, PagerDuty, and HipChat, to promptly notify you about cluster problems. Alertmanager sends alerts to the locations configured in the alertmanager-main secret in the openshift-monitoring namespace.
+This is the default configuration of the alertmanager-main secret. The double quotes can be removed to improve readability.
+
+~~~
+"global":
+"resolve_timeout": "5m"
+"receivers":
+- "name": "null"
+"route":
+"group_by":
+- "namespace"
+"group_interval": "5m"
+"group_wait": "30s"
+"receiver": "null"
+"repeat_interval": "12h"
+"routes":
+- "match":
+"alertname": "Watchdog"
+"receiver": "null"
+~~~
+This will have " in it and they must be removed before applying to the cluster. 
+~~~
+$ sed -i 's/"//g' /tmp/alertmanager.yaml
+~~~
+
+Email Example:
+~~~
+"global":
+  "resolve_timeout": "5m"
+  "smtp_smarthost": "utility.lab.example.com:25"
+  "smtp_from": "alerts@ocp4.example.com"
+  "smtp_auth_username": "smtp_training"
+  "smtp_auth_password": "Red_H4T@!"
+"  smtp_require_tls": false
+"receivers":
+- "name": "email-notification"
+  "email_configs":
+    - "to": "ocp-admins@example.com"
+- "name": "default"
+"route":
+  "group_by":
+  - "job"
+  "group_interval": "5m"
+  "group_wait": "30s"
+  "receiver": "default"
+  "repeat_interval": "12h"
+  "routes":
+  - "match":
+      "alertname": "Watchdog"
+    "receiver": "default"
+  - "match":
+      "severity": "critical"
+    "receiver": "email-notification"
+~~~
+
+###  Applying a New Alertmanager Configuration
+  - Apply a new Alertmanager configuration by updating the alertmanager-main secret in the openshift-monitoring namespace.
+~~~
+$ oc set data secret/alertmanager-main -n openshift-monitoring --from-file=/tmp/alertmanager.yaml
+secret/alertmanager-main data updated
+
+$ oc logs -f -c alertmanager alertmanager-main-0 -n openshift-monitoring
+...output omitted...
+level=info ts=2021-10-15T18:53:09.052Z caller=coordinator.go:119
+component=configuration msg="Loading configuration file" file=/etc/alertmanager/
+config/alertmanager.yaml
+level=info ts=2021-10-15T18:53:09.052Z caller=coordinator.go:131
+component=configuration msg="Completed loading of configuration file" file=/etc/
+alertmanager/config/alertmanager.yaml
+~~~
+
+
