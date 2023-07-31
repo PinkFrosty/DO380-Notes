@@ -431,3 +431,83 @@ visualization
 
 event routing
   - The Event Router monitors the OpenShift events API and sends the events to STDOUT so the collector can forward them to the logStore. The events from OpenShift are stored in the infra index in Elasticsearch.
+
+### Installing the Elasticsearch Operator
+
+The Elasticsearch Operator handles the creation of and updates to the Elasticsearch cluster defined in the Cluster Logging Custom Resource. Each node in the Elasticsearch cluster is deployed with a PVC named and managed by the Elasticsearch Operator. A unique Deployment object is created for each Elasticsearch node to ensure that each Elasticsearch node has a storage volume of its own.
+
+The Elasticsearch Operator must be installed in a namespace **other than** `openshift-operators` to avoid possible conflicts with metrics from other community operators. Create and use the `openshift-operators-redhat` namespace for the Elasticsearch Operator.
+
+~~~
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-operators-redhat
+  annotations:
+    openshift.io/node-selector: ""
+  labels:
+    openshift.io/cluster-monitoring:"true"
+~~~
+
+Create an `OperatorGroup` object to install the operator in all namespaces and a `Subscription` object to subscribe the `openshift-operators-redhat` namespace to the operator.
+
+~~~
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-operators-redhat
+  namespace: openshift-operators-redhat
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: elasticsearch-operator
+  namespace: openshift-operators-redhat
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  name: elasticsearch-operator
+~~~
+
+Create the RBAC objects to grant Prometheus permission to access the `openshift-operators-redhat` namespace.
+~~~
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: openshift-operators-redhat
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: openshift-operators-redhat
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: openshift-operators-redhat
+~~~
+
+Verify that operator is available in each namespace.
+~~~
+]$ oc get csv -A
+~~~
+
