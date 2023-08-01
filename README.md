@@ -68,7 +68,28 @@ Using kustomization
 ~~~
 $ kubectl apply -k directory_name
 ~~~
+Use the `kubectl apply -k directory_name` command to apply a kustomization.
 
+### Annotating Deployments with Image Stream Triggers
+Enhance Kubernetes deployments with OpenShift image stream tags by adding the following metadata annotation.
+
+~~~
+{
+  "image.openshift.io/triggers": "[
+        {
+           \"from\": {
+               \"kind\":\"ImageStreamTag\",
+               \"name\":\"versioned-hello:latest\"
+            },
+          \"fieldPath\":\"spec.template.spec.containers[?(@.name==\\\"hello\\
+\")].image\"
+        }
+    ]"
+}
+~~~
+You can retrieve that metadata annotation from a deployment by using the `oc get deploy/DEPLOYMENT_NAME -o yaml``.
+
+# Introducing Automation with OpenShift
 ### Extracting Information from Resources
 
 The following example command demonstrates how to list resources of a specific type located
@@ -89,6 +110,9 @@ DESCRIPTION:
      Total number of non-terminated pods targeted by this deployment (their
      labels match the selector).
 ~~~
+
+When using `oc exaplain deployment` or another resource you can keep going down by using `.`. I considered it the json path. `oc explain deployment.spec.selector`.
+
  
 **Extracting Information from a Single Resource**
 ~~~
