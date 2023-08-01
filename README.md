@@ -1,6 +1,13 @@
 # DO380-Notes
 
-### Moving from K8s to OCP
+# Authenticating to OpenShift
+
+Kube path
+~~~
+~/.kube/config
+~~~
+
+The `oc login` command creates or updates `~/.kube/config`
 
 The `oc config get-contexts` command lists the contexts in the `kubeconfig` file.
 ~~~
