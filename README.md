@@ -539,6 +539,6 @@ subjects:
 
 Verify that operator is available in each namespace.
 ~~~
-]$ oc get csv -A
+$ oc get csv -A
 ~~~
 
