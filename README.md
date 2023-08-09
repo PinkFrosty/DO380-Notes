@@ -186,13 +186,13 @@ metadata:
 ***Tid Bit***
 Use the `oc` with `--dry-run=client` command to create a yaml output for you.
 ~~~
-$ oc create sa newer -n testes -o yaml --dry-run=client
+$ oc create sa newer -n test -o yaml --dry-run=client
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
   name: newer
-  namespace: testes
+  namespace: test
 ~~~
 
 **Defining Roles and Role Bindings**
@@ -219,7 +219,7 @@ buildconfigs                 []  []  [get list watch]
 ...output omitted...
 ~~~
 
-1 yaml for all.
+Clusterrolebinding
 ~~~
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -328,6 +328,82 @@ There are several methods for retrieving the token, including:
 
   4. Log in using the oc login command, and then run the command oc whoami -t.
 
+How to grab the token from the `API` server.
+
+Find the oauth server.
+~~~
+$ oc get route -n openshift-authentication
+NAME             HOST/PORT                              PATH  SERVICES ...
+oauth-openshift  oauth-openshift.apps.ocp4.example.com        oauth-openshift ...
+~~~
+When you have the `HOST` from above, run the command below. Look for the line that starts with `Location`.
+
+~~~
+$ curl -u <user> -kv "https://oauth-openshift.apps.ocp4.example.com/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
+
+...output omitted...
+< Location: https://oauth-openshift.apps...example.com/oauth/token/implicit#access_token=sha256~xvZ8SsTiA3jRIiEX9QMUOLdaZRUPqubLy2AiQbQGDb0
+&expires_in=86400&scope=user%3Afull&token_type=Bearer
+...output omitted...
+~~~
+
+
+
+After that, you must include the bearer token as a header in requests to the API server as follows:
+
+~~~
+$ curl -k \
+  --header "Authorization: Bearer sha256~Ylfa...8sOY" \
+  -X GET https://api.example.com:6443/api
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "10.0.136.182:6443"
+    }
+  ]
+}
+~~~
+
+**Finding REST API Paths**
+
+The OpenShift REST API paths can be explored with a HTTP GET request to retrieve a list of possible paths:
+
+~~~
+$ curl -k \
+  --header "Authorization: Bearer sha256~Ylfa...8sOY" \
+  -X GET https://api.example.com:6443/openapi/v2 | jq
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Kubernetes",
+    "version": "v1.23.3+e419edf"
+  },
+  "paths": {
+    ...output omitted...
+    "/api/v1/pods": {
+      ...output omitted...
+    }
+    ...output omitted...
+    "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings": {
+      ...output omitted...
+    }
+    ...output omitted...
+    "/apis/apps/v1/namespaces/{namespace}/deployments": {
+      ...output omitted...
+    }
+    ...output omitted...
+    "/apis/route.openshift.io/v1/namespaces/{namespace}/routes": {
+      ...output omitted...
+    }
+  }
+...output omitted...
+}
+~~~
 
 # Storage
 
