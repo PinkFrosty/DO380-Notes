@@ -173,6 +173,161 @@ csi-snapshot-controller-operator
 
  ## Deploying Scripts on OpenShift
 
+**Service Accounts**
+
+~~~
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup_sa
+  namespace: database
+~~~
+
+***Tid Bit***
+Use the `oc` with `--dry-run=client` command to create a yaml output for you.
+~~~
+$ oc create sa newer -n testes -o yaml --dry-run=client
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: newer
+  namespace: testes
+~~~
+
+**Defining Roles and Role Bindings**
+
+A RoleBinding resource is namespaced. It associates accounts with roles within its namespace.
+
+A ClusterRoleBinding resource is not namespaced and applies to all resources in the cluster.
+
+~~~
+$ oc describe clusterrole view
+
+Name:  view
+Labels:
+   kubernetes.io/bootstrapping=rbac-defaults
+   rbac.authorization.k8s.io/aggregate-to-edit=true
+Annotations:vcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccczzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz rbac.authorization.kubernetes.io/autoupdate: true
+PolicyRule: Resources Non-Resource URLs Resource Names  Verbs
+
+---------  ----------------- --------------  -----
+appliedclusterresourcequotas []  []  [get list watch]
+bindings                     []  []  [get list watch]
+buildconfigs/webhooks        []  []  [get list watch]
+buildconfigs                 []  []  [get list watch]
+...output omitted...
+~~~
+
+1 yaml for all.
+~~~
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup
+  namespace: database
+subjects:
+- kind: ServiceAccount
+  name: backup_sa
+  namespace: database
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-reader
+~~~
+
+Alternatively, use the oc policy add-role-to-user command to create or modify role bindings.
+
+Create a custom role.
+~~~
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: configurator
+  namespace: database
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "create"]
+~~~  
+
+### Creating Jobs and Cron Jobs
+A Job creates and executes pods until they successfully complete their task. Jobs can be configured to run a single pod or many pods concurrently. 
+
+~~~
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backup
+  namespace: database
+spec:
+  activeDeadlineSeconds: 600 (1)
+  parallelism: 2 (2)
+  template: (3)
+    metadata:
+      name: backup
+    spec:
+      serviceAccountName: backup_sa (4)
+      containers:
+      - name: backup
+        image: example/backup_maker:v1.2.3
+      restartPolicy: OnFailure
+~~~
+1 Optionally, provide a duration limit in seconds. The Job will attempt to terminate if it exceeds the deadline.
+
+2 Specify the number of pods to run concurrently.
+
+3 The spec includes a pod template.
+
+4 Specify the name of the service account to associate with the pod. If you do not specify a service account, then the pod will use the default service account in the namespace.
+
+### Scheduling OpenShift Cron Jobs
+CronJobs resources create jobs based on a given time schedule. Use CronJobs for running automation, such as backups or reports, which should be executed on a regular interval.
+
+~~~
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-cron
+  namespace: database
+spec:
+  schedule: "1 0 * * *" 
+  jobTemplate: 
+    spec:
+      activeDeadlineSeconds: 600
+      parallelism: 2
+      template:
+        metadata:
+          name: backup
+        spec:
+          serviceAccountName: backup_sa
+          containers:
+          - name: backup
+            image: example/backup_maker:v1.2.3
+          restartPolicy: OnFailure
+~~~
+
+### Navigating the OpenShift REST API
+
+**Authenticating with the REST API**
+For interacting with the OpenShift API, two security concepts intervene:
+
+  - Authentication. Handled by the OpenShift OAuth server, its purpose is to validate that users are who they say they are.
+
+  - Authorization. Handled by the OpenShift API server, its purpose is to validate that users have access to the resources they are trying to interact with.
+
+In order to interact with OpenShift resources via the REST API, you must retrieve a bearer token from the OpenShift OAuth server, and then include this token as a header in requests to the API server.
+
+There are several methods for retrieving the token, including:
+
+  1. Request a token from the OAuth server path /oauth/authorize?client_id=openshift-challenging-client&response_type=token. The server responds with a 302 Redirect to a location. Find the access_token parameter in the location query string.
+
+  2. Log in using the oc login command and inspect the kubeconfig YAML file. This is normally located at ~/.kube/config. Find the token listed under your user entry.
+
+  3. Log in using the oc login command, and then run the oc proxy command to expose an API server proxy on your local machine. Any requests to the proxy server will identify as the user logged in with oc.
+
+  4. Log in using the oc login command, and then run the command oc whoami -t.
+
 
 # Storage
 
