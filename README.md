@@ -405,6 +405,13 @@ $ curl -k \
 }
 ~~~
 
+### Writing Ansible Playbooks to Manage OpenShift Resources
+
+Ansible Certified Content Collections to automate your Kubernetes and OpenShift clusters: 'kubernetes.core' and 'redhat.openshift'.
+
+
+
+
 # Storage
 
 ---
