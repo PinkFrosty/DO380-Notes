@@ -407,9 +407,9 @@ $ curl -k \
 
 ### Writing Ansible Playbooks to Manage OpenShift Resources
 
-Ansible Certified Content Collections to automate your Kubernetes and OpenShift clusters: 'kubernetes.core' and 'redhat.openshift'.
+Ansible Content for Kubernetes and OpenShift clusters: 'kubernetes.core' and 'redhat.openshift'.
 
-
+Using modules for k8s or OCP requires you authenticate to the API. There several methods to do so. 
 
 
 # Storage
