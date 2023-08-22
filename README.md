@@ -411,7 +411,85 @@ Ansible Content for Kubernetes and OpenShift clusters: 'kubernetes.core' and 're
 
 Using modules for k8s or OCP requires you authenticate to the API. There several methods to do so. 
 
+K8s and OCP have common parameters.
+  - api_key
+  - host
+  - ca_cert
+  - namespace
+ Use module defaults.
+~~~
+---
+- name: Configuring the OpenShift cluster
+  hosts: localhost
+  module_defaults:
+    group/kubernetes.core.k8s:
+      api_key: "{{ auth_token }}"
+      host: https://api.example.com:6443
+      ca_cert: /etc/pki/tls/certs/ca-bundle.crt
+    group/redhat.openshift.openshift:
+      api_key: "{{ auth_token }}"
+      host: https://api.example.com:6443
+      ca_cert: /etc/pki/tls/certs/ca-bundle.crt
+...output omitted...
+~~~
+Example playbook
+~~~
+---
+- name: Logging in to OpenShift
+  hosts: localhost
 
+  tasks:
+    - name: Ensure an access token is retrieved for the developer user
+      redhat.openshift.openshift_auth:  1
+        host: https://api.example.com:6443
+        username: developer
+        password: developer
+      register: auth_results  2
+
+- name: Deploying the intranet front end application
+  hosts: localhost
+
+  module_defaults:  3
+    group/redhat.openshift.openshift:
+      namespace: intranet-front
+      api_key: "{{ auth_results['openshift_auth']['api_key'] }}"
+      host: https://api.example.com:6443
+    group/kubernetes.core.k8s:
+      namespace: intranet-front
+      api_key: "{{ auth_results['openshift_auth']['api_key'] }}"
+      host: https://api.example.com:6443
+
+  tasks:
+    - name: Ensure the project exists
+      redhat.openshift.k8s:
+        state: present
+        resource_definition:  4
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: intranet-front
+
+    - name: Ensure the intranet front end is deployed
+      redhat.openshift.k8s:
+        state: present
+        src: intranet-front.yml  5
+
+    - name: Ensure the deployments is scaled up
+      kubernetes.core.k8s_scale:  6
+        kind: Deployment
+        name: intranet-front
+        replicas: 5
+
+    - name: Ensure a route exists
+      redhat.openshift.openshift_route:  7
+        service: intranet-front-svc
+      register: route
+
+    - name: Ensure the route is displayed
+      debug:
+        msg: "The Intranet is available at
+              http://{{ route['result']['spec']['host'] }}"
+~~~
 # Storage
 
 ---
