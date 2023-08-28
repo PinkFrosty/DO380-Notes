@@ -64,11 +64,27 @@ bases:
   - path-to-kustomization
 ~~~
 
+*Tidbit* 
+You can add a new image to the kustomization.yaml
+
+~~~
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - path-to-kustomization
+images:
+  - name: registry.new.example.com:8443/versioned-hello
+    newTag: v1.1
+~~~
+
+
 Using kustomization
 ~~~
 $ kubectl apply -k directory_name
 ~~~
 Use the `kubectl apply -k directory_name` command to apply a kustomization.
+
+
 
 ### Annotating Deployments with Image Stream Triggers
 Enhance Kubernetes deployments with OpenShift image stream tags by adding the following metadata annotation.
