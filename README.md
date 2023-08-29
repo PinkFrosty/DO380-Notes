@@ -105,6 +105,11 @@ Enhance Kubernetes deployments with OpenShift image stream tags by adding the fo
 ~~~
 You can retrieve that metadata annotation from a deployment by using the `oc get deploy/DEPLOYMENT_NAME -o yaml``.
 
+Set the trigger annotation.
+~~~
+oc set trigger deploy/DEPLOYMENT_NAME --from-image IMAGE_STREAM_TAG -c CONTAINER_NAME.
+~~~
+
 # Introducing Automation with OpenShift
 ### Extracting Information from Resources
 
