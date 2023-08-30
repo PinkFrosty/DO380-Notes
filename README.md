@@ -77,14 +77,11 @@ images:
     newTag: v1.1
 ~~~
 
-
 Using kustomization
 ~~~
 $ kubectl apply -k directory_name
 ~~~
 Use the `kubectl apply -k directory_name` command to apply a kustomization.
-
-
 
 ### Annotating Deployments with Image Stream Triggers
 Enhance Kubernetes deployments with OpenShift image stream tags by adding the following metadata annotation.
@@ -105,9 +102,22 @@ Enhance Kubernetes deployments with OpenShift image stream tags by adding the fo
 ~~~
 You can retrieve that metadata annotation from a deployment by using the `oc get deploy/DEPLOYMENT_NAME -o yaml``.
 
+*Tidbit*
+Use `skopeo` to copy an image. 
+~~~
+$ skopeo copy docker://<registry.com/repo/image:v1.0> docker://<registry.com/repo/image:latest> 
+~~~
+
 Set the trigger annotation.
 ~~~
-oc set trigger deploy/DEPLOYMENT_NAME --from-image IMAGE_STREAM_TAG -c CONTAINER_NAME.
+$ oc set trigger deploy/DEPLOYMENT_NAME --from-image IMAGE_STREAM_TAG -c CONTAINER_NAME.
+
+$ oc set triggers deployment/hello --from-image example:latest -c hello
+~~~
+
+You can `get` for more than 1 resource.
+~~~
+oc get deployments,pods,services
 ~~~
 
 # Introducing Automation with OpenShift
