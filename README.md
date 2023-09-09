@@ -1,5 +1,13 @@
 # DO380-Notes
 
+Chapters:
+OpenShift CLI developer command reference - contexts
+Images - Triggering updates on image stream changes
+Authentication and authorization - rolebinding
+Nodes - Jobs
+Operators - well....
+
+
 # Authenticating to OpenShift
 
 Kube path
@@ -22,7 +30,7 @@ $ oc config use-context default/api-ocp-example-com:6443/admin
 The `oc config set-context` command updates a context.
 ~~~
 $ oc config set-context /api-ocp-example-com:6443/developer --namespace=namespace
-~~~
+~~~Triggering updates on image stream changes
 
 ### Kubernetes Kustomize
 
@@ -378,8 +386,6 @@ $ curl -u <user> -kv "https://oauth-openshift.apps.ocp4.example.com/oauth/author
 ...output omitted...
 ~~~
 
-
-
 After that, you must include the bearer token as a header in requests to the API server as follows:
 
 ~~~
@@ -521,6 +527,188 @@ Example playbook
         msg: "The Intranet is available at
               http://{{ route['result']['spec']['host'] }}"
 ~~~
+# Managing OpenShift Operators
+### Describing Operators
+
+OpenShift operators implement OpenShift features such as self-healing, updates, and other
+administrative tasks, either on resources or cluster-wide actions. Operators package, deploy, and
+manage an OpenShift application.
+
+OpenShift uses operators to manage the cluster by controlling tasks, such as upgrades and
+self-healing, among others. For example, the Cluster Version Operator (CVO) manages cluster
+operators and their upgrades.
+Additional operators can run applications or add features to OpenShift.
+There are several operators in an OpenShift cluster, such as:
+  - The OperatorHub, which is a registry for OpenShift operators.
+  - The Operator Lifecycle Manager (OLM), which installs, updates, and manages operators.
+
+Use either the CLI or the web console to install operators located in the OperatorHub.
+
+### Installing Operators from the OperatorHub
+
+There are several ways to install operators in an OpenShift cluster, including: OperatorHub, Helm
+charts, and custom YAML files, among others. The recommended way to install operators is from
+the OperatorHub, using either the Web Console or the CLI. Installing operators from the Web
+Console is more straightforward than using the CLI. However, creating resource files and applying
+them by using the CLI allows you to automate your installation.
+
+Operators that come with OpenShift (also called cluster operators) are managed by the Cluster
+Version Operator, and operators that are installed from the OperatorHub are managed by the
+Operator Lifecycle Manager (OLM).
+
+There are three initial settings that must be defined when installing an operator.
+Installation mode
+  - An operator can be installed on all namespaces or on an individual namespace, if supported.
+Update Channel
+  - If the operator is available through multiple channels, this option selects the channel to which the operator will subscribe.
+Approval strategy
+  - This option determines whether the operator is updated, either automatically or manually.
+
+### Installing an Operator from the OLM by Using the CLI
+
+~~~
+$ oc get packagemanifests
+
+$ oc describe packagemanifests <operator>
+
+$ oc describe packagemanifests mariadb-operator
+~~~
+
+### Install an Operator
+
+Create a namespace for the operator
+~~~
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    openshift.io/cluster-monitoring: "true"
+  name: namespace
+~~~
+
+Create an operator group object.
+~~~
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: operatorgroup-name
+  namespace: namespace
+spec:
+  targetNamespaces:
+  - namespace
+~~~
+
+Create a subscription.
+~~~
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: subscription-name (1)
+  namespace: namespace (2)
+spec:
+  channel: "4.7"
+  name: file-integrity-operator (3)
+  source: redhat-operators (4)
+  sourceNamespace: openshift-marketplace (5)
+~~~
+
+1. Name of the subscription
+2. Namespace in which the operator will run
+3. Name of the operator to subscribe to
+4. Catalog source that provides the operator
+5. Namespace of the catalog source
+
+Check the logs to verify opertor installation.
+~~~
+$ oc logs pod/olm-operator-c5599dfd7-nknfx -n openshift-operator-lifecycle-manager
+~~~
+
+Inspect the subscription object to verify the operator status.
+~~~
+$ oc describe sub `subscription-name` -n `namespace`
+~~~
+
+List All Operatots
+~~~
+$ oc get csv -A
+~~~
+
+Operators can be subscribed to one namespace or to all namespaces. To list the operators
+managed by the OLM, list the active subscriptions.
+~~~
+$ oc get subs -A
+~~~
+
+To view the status and events from custom resources related to a given operator, describe the
+operator deployment.
+~~~
+$ oc describe deployment.apps/file-integrity-operator |grep -i kind
+~~~
+
+Check the operator elements by getting all objects in the operator’s namespace. If the operator is installed in all the namespaces, then make the query in the openshift-operators namespace and look for the name of the operator to discover the elements.
+~~~
+$ oc get all -n openshift-file-intergrity
+~~~
+
+Use the oc logs command to view Events and logs of an operator.
+~~~
+$ oc logs deployment.apps/file-integrity-operator
+~~~
+
+Modify an Operator fromthe OLM Usinh the CLI
+~~~
+$ oc apply -f file-integrity-operator-subscription.yaml
+~~~
+
+### Deleting the Subscription and Cluster Service Version objects
+Review the current version of the subscribed operator in the currentCSV field.
+~~~
+$ oc get sub `subscription-name` -o yaml | grep currentCSV
+$ oc delete sub `currentCSV`
+$ oc delete csv `currentCSV`
+~~~
+
+### Describing Cluster Operators
+~~~
+$ oc get clusteroperator
+NAME                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE
+authentication             4.10.20    True        False         False      54m
+baremetal                  4.10.20    True        False         False      98d
+cloud-controller-manager   4.10.20    True        False         False      98d
+cloud-credential           4.10.20    True        False         False      98d
+~~~
+
+### Describing the Cluster Version Operator
+Run the `oc get clusterversion version` command to retrieve the release image that the
+CVO uses:
+~~~
+$ oc get clusterversion version -o jsonpath='{.status.desired.image}'
+quay.io/openshift-release-dev/ocp-release@sha256:7ffe...cc56
+~~~
+
+Extract the contents of the release image to a local directory:
+~~~
+$ oc adm release extract --to=release-image --from=quay.io/openshift-release-dev/ocp-release@sha256:7ffe...cc56
+~~~
+
+The following example displays the details of the Cluster Samples Operator, which manages the image streams and the templates in the `openshift` namespace
+~~~
+$ grep -l "kind: ClusterOperator" release-image/*
+...output omitted...
+release-image/0000_50_cluster-samples-operator_07-clusteroperator.yaml
+...output omitted...
+
+$ cat release-image/0000_50_cluster-samples-operator_07*.yaml
+apiVersion: config.openshift.io/v1
+kind: ClusterOperator
+metadata:
+name: openshift-samples
+...output omitted...
+~~~
+
+# GitOps
+
+
 # Storage
 
 ---
@@ -882,10 +1070,5 @@ subjects:
   - kind: ServiceAccount
     name: prometheus-k8s
     namespace: openshift-operators-redhat
-~~~
-
-Verify that operator is available in each namespace.
-~~~
-$ oc get csv -A
 ~~~
 
