@@ -31,7 +31,7 @@ $ oc config use-context default/api-ocp-example-com:6443/admin
 The `oc config set-context` command updates a context.
 ~~~
 $ oc config set-context /api-ocp-example-com:6443/developer --namespace=namespace
-~~~Triggering updates on image stream changes
+~~~
 
 ### Kubernetes Kustomize
 
