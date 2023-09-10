@@ -1,6 +1,7 @@
 # DO380-Notes
 
-Chapters:
+Chapters
+
 OpenShift CLI developer command reference - contexts
 Images - Triggering updates on image stream changes
 Authentication and authorization - rolebinding
