@@ -823,7 +823,24 @@ $ oc new-project syncldap
 8. Check the logs
 
 # Configuring Trusted Certificates
+### Changing the Ingress Controller Operator Certificate
 
+1. Create a new configMap in the `openshift-config` project
+~~~
+$ oc create configmap <CONFIGMAP-NAME> --from-file ca-bundle.crt=<PATH-TO-CERTIFICATE> -n openshift-config
+~~~
+
+2. Configure the proxy to use the new configmap
+~~~
+$ oc patch proxy/cluster --type=merge --patch='{"spec":{"trustedCA":{"name":"<CONFIGMAP-NAME>"}}}'
+~~~
+
+3. Create a new TLS secret in the openshift-ingress namespace using the new certificate and its corresponding key. 
+~~~
+$ oc create secret tls <SECRET-NAME> --cert <PATH-TO-CERTIFICATE> --key <PATH-TO-KEY> -n openshift-ingress
+~~~
+
+4. 
 
 
 # Storage
