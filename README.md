@@ -2,12 +2,11 @@
 
 Chapters
 
-OpenShift CLI developer command reference - contexts
-Images - Triggering updates on image stream changes
-Authentication and authorization - rolebinding
-Nodes - Jobs
-Operators - well....
-
+  - OpenShift CLI developer command reference - contexts
+  - Images - Triggering updates on image stream changes
+  - Authentication and authorization - rolebinding, LDAP
+  - Nodes - Jobs
+  - Operators - well....
 
 # Authenticating to OpenShift
 
@@ -692,7 +691,7 @@ Extract the contents of the release image to a local directory:
 $ oc adm release extract --to=release-image --from=quay.io/openshift-release-dev/ocp-release@sha256:7ffe...cc56
 ~~~
 
-The following example displays the details of the Cluster Samples Operator, which manages the image streams and the templates in the `openshift` namespace
+The following example displays the details of the Cluster Samples Operator, which manages the image streams and the templates i Authentication and authorizationn the `openshift` namespace
 ~~~
 $ grep -l "kind: ClusterOperator" release-image/*
 ...output omitted...
@@ -708,6 +707,26 @@ name: openshift-samples
 ~~~
 
 # GitOps
+
+**Deploying Jenkins**
+Create project
+deploy jenkins
+add self-provisioner to the sa
+check the logs of the running pods to make sure its up and running
+Get the address
+~~~
+$ oc new-project jenkins
+$ oc new-app --template jenkins-persistent
+$ oc adm policy add-cluster-role-to-user self-provisioner -z jenkins -n jenkins
+$ oc get pods 
+$ oc logs jenkins-x-xxxx |grep 'up and running'
+$ oc get routes
+~~~
+
+# Configuring Enterprise Authentication
+### Configuring the LDAP Identity Provider
+
+
 
 
 # Storage
@@ -1073,3 +1092,65 @@ subjects:
     namespace: openshift-operators-redhat
 ~~~
 
+---
+[Objectives:](https://www.redhat.com/en/services/training/ex380-certified-specialist-openshift-automation-exam?section=objectives) 
+Study points for the exam
+To help you prepare, the exam objectives highlight the task areas you can expect to see covered in the exam. Red Hat reserves the right to add, modify, and remove exam objectives. Such changes will be made public in advance. 
+
+As part of this exam, you should be able to perform these tasks:
+
+Deploy Kubernetes applications on OpenShift
+  - Assemble an application from Kubernetes components
+  - Understand and use Kustomize
+  - Use an image stream with a Kubernetes deployment
+Configure and automate OpenShift tasks
+  - Create a simple script to automate a task
+  - Deploy an existing script to automate a task
+  - Troubleshoot and correct a script
+  - Understand and query the REST API using CLI tools
+  - Create a custom role
+  - Create a cron job
+  - Create a simple Ansible playbook
+Work with and manage OpenShift Operators
+  - Install an operator
+  - Update an operator
+  - Delete an operator
+  - Subscribe an operator
+  - Troubleshoot an operator
+Work with registries
+  - Pull/push content from remote registries
+  - Tag images in remote registries
+Implement GitOps with Jenkins
+  - Deploy a Jenkins master
+  - Create a Jenkins pipeline to remediate configuration drift
+Configure Enterprise Authentication
+  - Configure an LDAP identity provider
+  - Configure RBAC for an LDAP provided user account
+  - Synchronize OpenShift groups with LDAP
+Understand and manage ingress
+  - Use the oc route command to expose services
+  - Understand how ingress components relate to OpenShift deployments and projects
+  - Configure trusted TLS Certificates
+  - Work with certificates using the web and CLI interfaces
+  - Renew and apply a certificate
+Work with machine configurations
+  - Understand MachineConfig object structure
+  - Create custom machine configurations
+Configure Dedicated Node Pools
+  - Add a worker node
+  - Create custom machine config pools
+Configure Persistent Storage
+  - Provision shared storage for applications
+  - Provision block storage
+  - Configure and use storage quotas, classes, and policies
+  - Troubleshoot storage issues
+Manage Cluster Monitoring and Metrics
+  - Manage OpenShift alerts
+  - Use monitoring to troubleshoot cluster issues
+Provision and Inspect Cluster Logging
+  - Deploy cluster logging
+  - Query cluster logs
+  - Diagnose cluster logging problems
+Recover Failed Worker Nodes
+  - Diagnose worker node failures
+  - Recover a node that has failed
