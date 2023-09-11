@@ -7,6 +7,7 @@ Chapters
   - Authentication and authorization - rolebinding, LDAP
   - Nodes - Jobs
   - Operators - well....
+  - Security and compliance - certs
 
 # Authenticating to OpenShift
 
@@ -726,6 +727,102 @@ $ oc get routes
 # Configuring Enterprise Authentication
 ### Configuring the LDAP Identity Provider
 
+1. Create secret for the bind password
+~~~
+$ oc create secret generic ldap-secret -n openshift-config --from-literal=bindPassword=$(LDAP_ADMIN_PASSWORD)
+~~~
+
+2. Configure cert if using TLS.
+~~~
+$ oc create secret configmap ca-config-map -n openshift-config --from-file=ca.crt
+~~~
+
+3. Update OpenShift oauth configuration for LDAP.
+~~~
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+  - name: ldapidp
+    mappingMethod: claim
+    type: LDAP
+    ldap:
+      attributes:
+        id:
+        - dn
+        email:
+        - mail
+        name:
+        - cn
+        preferredUsername:
+        - uid
+      bindDN: "uid=admin,cn=users,cn=accounts,dc=ocp4,dc=example,dc=com"
+      bindPassword: 
+        name: ldap-secret
+      ca:
+        name: ca-config-map
+      insecure: false
+      url: "ldaps://idm.ocp4.example.com/cn=users,cn=accounts,dc=ocp4,dc=example,dc=com?uid" 
+~~~
+
+4. Wait for OpenShift authentications to recreate then test.
+
+5. Add permissions to users.
+~~~
+$ oc adm policy add-cluster-role-to-user cluster-admin admin
+~~~
+
+### Syncing LDAP Groups
+
+1. Create the LDAP sync config.
+~~~
+kind: LDAPSyncConfig
+apiVersion: v1
+url: ldaps://idm.ocp4.example.com
+bindDN: uid=ldap_user_for_sync,cn=users,cn=accounts,dc=example,dc=com
+bindPassword: ldap_user_for_sync_password
+insecure: false
+ca: /path/to/ca.crt
+rfc2307: 5
+    groupsQuery:
+        baseDN: "cn=groups,cn=accounts,dc=example,dc=com"
+        scope: sub
+        derefAliases: never
+        pageSize: 0
+        filter: (objectClass=posixgroup)
+    groupUIDAttribute: dn
+    groupNameAttributes: [ cn ]
+    groupMembershipAttributes: [ member ]
+    usersQuery:
+        baseDN: "cn=accounts,dc=example,dc=com"
+        scope: sub
+        derefAliases: never
+        pageSize: 0
+    userUIDAttribute: dn
+    userNameAttributes: [ cn ]
+    tolerateMemberNotFoundErrors: false
+    tolerateMemberOutOfScopeErrors: true
+~~~
+
+2. Test
+~~~
+$ oc adm groups sync --sync-config ldap-sync.yml
+~~~
+
+3. Create a project
+~~~
+$ oc new-project syncldap
+~~~
+
+4. Create serviceaccount, ClusterRole, and clusterRoleBinding
+5. Create configMap for cert and secret for bindPassword
+6. Create configMap for the ldap-sync
+7. Create cron job for to sync. 
+8. Check the logs
+
+# Configuring Trusted Certificates
 
 
 
