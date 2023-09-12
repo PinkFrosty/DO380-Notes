@@ -840,7 +840,89 @@ $ oc patch proxy/cluster --type=merge --patch='{"spec":{"trustedCA":{"name":"<CO
 $ oc create secret tls <SECRET-NAME> --cert <PATH-TO-CERTIFICATE> --key <PATH-TO-KEY> -n openshift-ingress
 ~~~
 
-4. 
+4. Update the ingress controller
+~~~
+$ oc patch ingresscontroller.operator/default -n openshift-ingress-operator --type=merge --patch='{"spec": {"defaultCertificate": {"name": "<SECRET-NAME>"}}}'
+~~~
+
+### API Certificate
+
+1. Create a secret that contains the certificate chain and private key.
+~~~
+$ oc create secret tls <SECRET-NAME> --cert <PATH-TO-CERTIFICATE> --key <PATH-TO-KEY> -n openshift-config
+~~~
+
+2. Modify the cluster API to use the new cert.
+~~~
+$ oc patch apiserver cluster --type=merge -p '{"spec":{"servingCerts": {"namedCertificates":''[{"names": ["<API-SERVER-URL>"],''"servingCertificate": {"name": "<SECRET-NAME>"}}]}}}'
+~~~
+
+3. Confirm the updates
+~~~
+oc get clusteroperators kube-apiserver
+~~~
+
+### Create an edge route
+~~~
+$ oc create route edge <ROUTE-NAME> --service <SERVICE>
+~~~
+
+### Configuring Applications to Trust the Enterprise Certificate Authority
+
+Check if you enterprise CA is included
+~~~
+$ oc get proxy/cluster -o jsonpath='{.spec.trustedCA.name}{"\n"}'
+<CONFIGMAP-NAME>
+~~~
+
+If you have the rootCA extract it.
+~~~
+$ oc extract configmap <CONFIGMAP-NAME> -n openshift-config --confirm
+~~~
+
+Replace the previously identified configuration map with the new certificate.
+~~~
+$ oc set data configmap <CONFIGMAP-NAME> --from-file ca-bundle.crt=<PATH-TO-NEW-CERTIFICATE> -n openshift-config
+~~~
+
+Injecting the Trusted CA Bundle
+~~~
+$ oc create configmap <CONFIGMAP-NAME>
+
+$ oc label configmap <CONFIGMAP-NAME> config.openshift.io/inject-trusted-cabundle=true
+~~~
+
+Moving a Trusted CA Bundle
+~~~
+$ oc set volume dc/<DC-NAME> -t configmap --name trusted-ca --add --read-only=true --mount-path /etc/pki/ca-trust/extracted/pem  --configmap-name <CONFIGMAP-NAME
+~~~
+
+### TroubleShooting Certs
+Find the cert for APU
+~~~
+$ oc get apiserver/cluster -o yaml
+
+$ oc extract secret/<SECRET-NAME> -n openshift-config --confirm
+
+$ openssl x509 -in tls.crt -noout -dates
+~~~
+
+Replace the cert
+~~~
+$ oc set data secret <SECRET-NAME> --from-file tls.crt=<PATH-TO-NEW-CERTIFICATE> --from-file tls.key=<PATH-TO-KEY> -n openshift-config
+~~~
+
+Renewing Ingress
+~~~
+$ oc get ingresscontroller/default -n openshift-ingress-operator -o jsonpath='{.spec.defaultCertificate.name}{"\n"}' <SECRET-NAME>
+~~~
+
+Extract the secret, and then use the openssl command to inspect the certificate.
+~~~
+$ oc extract secret/<SECRET-NAME> -n openshift-ingress --confirm
+~~~
+
+# Configuring Dedicated Node Pools
 
 
 # Storage
