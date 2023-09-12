@@ -8,6 +8,7 @@ Chapters
   - Nodes - Jobs
   - Operators - well....
   - Security and compliance - certs
+  - Storage - well....
 
 # Authenticating to OpenShift
 
@@ -1055,7 +1056,7 @@ $ oc adm new-project debug --node-selector=""
 
 
 
- Display all storage-related package manifests.
+Display all storage-related package manifests.
 ~~~
 $ oc get packagemanifests | egrep 'NAME|storage'
 ~~~
