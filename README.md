@@ -924,6 +924,122 @@ $ oc extract secret/<SECRET-NAME> -n openshift-ingress --confirm
 
 # Configuring Dedicated Node Pools
 
+Maintenance on a node
+~~~
+$ oc adm cordon worker06
+$ oc get nodes worker06
+$ oc adm drain worker06
+$ oc adm drain worker06 --delete-emptydir-data --ignore-daemonsets --force
+$ oc get poddisruptionbudget -A
+~~~
+
+The oc adm drain command has a --disable-eviction option to bypass PDB and drain the node.
+~~~
+$ oc adm drain worker01 --ignore-daemonsets --disable-eviction
+~~~
+
+### Creating Custom Machine Config Pools
+
+The MCO defines two custom resources.
+
+**MachineConfig (MC)**
+Machine Configs declare instance customizations using the Ignition config format. Machine Configs are labeled with a role such as worker or infra.
+
+**MachineConfigPool (MCP)**
+Machine Config Pools use labels to match one or more Machine Configs to one or more nodes. This creates a pool of nodes with the same configuration. The Machine Config Operator uses the Machine Config Pool to track status as it applies Machine Configs to the nodes.
+
+### Creating Machine Configs
+Machine Configs use the Ignition configuration format. The Machine Config Daemon supports a limited set of configuration changes including the following:
+  - Configuring core user SSH authorized keys.
+  - Declaring Systemd units.
+  - Writing custom files.
+
+The Machine Config Operator reads Machine Configs alphanumerically, from 00-* to 99-*.
+
+~~~
+$ oc get machineconfig --selector=machineconfiguration.openshift.io/role=worker
+~~~
+
+**Writing Custom Files**
+Writing a customer journald MachineConfigExample
+~~~
+piVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 60-journald
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,VGVzdGl...E8gKItAo=
+        filesystem: root
+        mode: 0644
+        path: /etc/systemd/journald.conf
+~~~
+
+**Creating Machine Config Pool**
+Machine Config Pools specify a machineConfigSelector and a nodeSelector. By default, OpenShift includes only master and worker Machine Config Pools, but custom pools can be added.
+~~~
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfigPool
+metadata:
+    name: ml
+spec:
+    machineConfigSelector:
+        matchExpressions:
+            - key: machineconfiguration.openshift.io/role
+              operator: In
+              values: [worker, ml]
+    nodeSelector:
+        matchLabels:
+        node-role.kubernetes.io/ml: ""
+~~~
+
+**Labeling Nodes**
+~~~
+$ oc label node/worker03 node-role.kubernetes.io/infra=
+~~~
+
+**Remove a label**
+~~~
+$ oc label node/worker03 node-role.kubernetes.io/worker-
+~~~
+
+**Configuring Pod Scheduling**
+~~~
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: example
+  template:
+    metadata:
+      labels:
+        app: example
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      containers:
+      - image: example:v1.0
+        name: example
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+~~~
+
+Problems with debug for a node. Create a new project with the `--node-selector=""`
+~~~
+$ oc adm new-project debug --node-selector=""
+~~~
 
 # Storage
 
