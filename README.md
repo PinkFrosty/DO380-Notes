@@ -1090,6 +1090,32 @@ LocalVolume LocalVolumeSet LocalVolumeDiscovery LocalVolumeDiscoveryResult
 
 Assigning Cluster Monitoring Roles
 
+Prometheus for deploying Prometheus instances. Display all resource instances using the following command:
+~~~
+$ oc get prometheuses -A
+~~~
+
+ServiceMonitor for managing configuration files that describe how and where to scrape the data from application services. Display all resource instances using the following command:
+~~~
+$ oc get servicemonitors -A
+~~~
+
+PodMonitor for managing configuration files for scraping data from pods. Display all resource instances using the following command:
+~~~
+$ oc get podmonitors -A
+~~~
+
+Alertmanager for deploying and managing alert manager instances. Display all resource instances using the following command:
+~~~
+$ oc get alertmanagers -A
+~~~
+
+PrometheusRule for managing rules. Rules correspond to a query set, a filter, and any other field. Display all resource instances using the following command:
+~~~
+$ oc get prometheusrules -A
+~~~
+
+Assigning Cluster Monitoring Roles
 ~~~
 $ oc adm policy add-cluster-role-to-user cluster-monitoring-view USER
 ~~~
@@ -1103,10 +1129,11 @@ $ oc adm policy add-cluster-role-to-user cluster-monitoring-view USER
 |Silenced | The alert is Firing, but is actively being silenced. Administrators can silence an alert to temporarily deactivate it.
 |Not Firing |  Any alert that is not Firing, Pending, or Silenced is labeled as Not Firing.
 
+
+
 ### Describing Alertmanager Default Receivers
 
-By default, alerts are not sent to external locations. The OpenShift web console displays alerts at
-Observe > Alerting. Also, alerts are accessible from the Alertmanager API.
+By default, alerts are not sent to external locations. The OpenShift web console displays alerts at Observe > Alerting. Also, alerts are accessible from the Alertmanager API.
 
 ~~~
 [user@host ~]$ ALERTMANAGER="$(oc get route/alertmanager-main -n openshift-monitoring -o jsonpath='{.spec.host}')"
