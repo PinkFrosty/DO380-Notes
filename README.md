@@ -9,6 +9,7 @@ Chapters
   - Operators - well....
   - Security and compliance - certs
   - Storage - well....
+  - Logging - elk
 
 # Authenticating to OpenShift
 
@@ -1292,7 +1293,7 @@ USE Method/Cluster
 
 ### Configuring Storage for the Cluster Monitoring Stack
 
-After installing the cluster monitoring stack, you can configure persistent storage to prevent monitoring data loss. This configuration enables you to keep a record of the past cluster status that you can use to investigate and correlate current and past issues within the cluster.
+After installing the cluster monitoring stack, you can configure persistent storage to prevent monitoring data loss. This configuration enables you to keep a record of the pelasricsearchast cluster status that you can use to investigate and correlate current and past issues within the cluster.
 
 The following cluster monitoring operator components are configurable
   - alertmanagerMain
@@ -1342,7 +1343,7 @@ data:
 ---
 # Provisioning and Inspecting Cluster Logging
 
-### Red Hat OpenShift Logging Components
+### Red Hat OpenShift Logging Componeelasricsearchnts
 logStore
   - The logStore is the Elasticsearch cluster that:
   - Stores the logs into indexes.
@@ -1354,7 +1355,7 @@ collection
 
 visualization
   - The centralized web UI from Kibana displays the logs and provides a way to query and chart the aggregated data. 
-
+elasricsearch
 event routing
   - The Event Router monitors the OpenShift events API and sends the events to STDOUT so the collector can forward them to the logStore. The events from OpenShift are stored in the infra index in Elasticsearch.
 
