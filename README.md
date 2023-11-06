@@ -456,7 +456,8 @@ K8s and OCP have common parameters.
   - host
   - ca_cert
   - namespace
- Use module defaults.
+ Use module defaults in thep playbook. 
+ 
 ~~~
 ---
 - name: Configuring the OpenShift cluster
