@@ -3,7 +3,7 @@
 Chapters
 
   - OpenShift CLI developer command reference - contexts
-  - Images - Triggering updates on image stream changes
+  - Images - Triggering updates on image stream changes, Jenkins Template
   - Authentication and authorization - rolebinding, LDAP
   - Nodes - Jobs
   - Operators - well....
@@ -457,7 +457,7 @@ K8s and OCP have common parameters.
   - ca_cert
   - namespace
  Use module defaults in thep playbook. 
- 
+
 ~~~
 ---
 - name: Configuring the OpenShift cluster
@@ -481,16 +481,16 @@ Example playbook
 
   tasks:
     - name: Ensure an access token is retrieved for the developer user
-      redhat.openshift.openshift_auth:  1
+      redhat.openshift.openshift_auth:
         host: https://api.example.com:6443
         username: developer
         password: developer
-      register: auth_results  2
+      register: auth_results
 
 - name: Deploying the intranet front end application
   hosts: localhost
 
-  module_defaults:  3
+  module_defaults:
     group/redhat.openshift.openshift:
       namespace: intranet-front
       api_key: "{{ auth_results['openshift_auth']['api_key'] }}"
@@ -504,7 +504,7 @@ Example playbook
     - name: Ensure the project exists
       redhat.openshift.k8s:
         state: present
-        resource_definition:  4
+        resource_definition:
           apiVersion: project.openshift.io/v1
           kind: Project
           metadata:
@@ -513,16 +513,16 @@ Example playbook
     - name: Ensure the intranet front end is deployed
       redhat.openshift.k8s:
         state: present
-        src: intranet-front.yml  5
+        src: intranet-front.yml
 
     - name: Ensure the deployments is scaled up
-      kubernetes.core.k8s_scale:  6
+      kubernetes.core.k8s_scale:
         kind: Deployment
         name: intranet-front
         replicas: 5
 
     - name: Ensure a route exists
-      redhat.openshift.openshift_route:  7
+      redhat.openshift.openshift_route:
         service: intranet-front-svc
       register: route
 
