@@ -726,6 +726,13 @@ $ oc get pods
 $ oc logs jenkins-x-xxxx |grep 'up and running'
 $ oc get routes
 ~~~
+Might need to configure Jenkins
+  - Get route for login
+  - On the left `Manage Jenkins`
+  - Under `System Configuration` click `Manage Nodes and Clouds`
+  - Click `Configure Clouds` then click `Pod Templates`
+
+
 
 # Configuring Enterprise Authentication
 ### Configuring the LDAP Identity Provider
